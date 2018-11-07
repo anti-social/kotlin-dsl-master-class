@@ -24,14 +24,16 @@ abstract class FieldSet {
 }
 
 abstract class SubDocument : FieldSet() {
-    fun <V: SubDocument> obj(factory: () -> V) = SubDocumentProperty(factory)
+    fun <V: SubDocument> obj(name: String? = null, factory: () -> V) = SubDocumentProperty(name, factory)
 
     class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
         operator fun provideDelegate(thisRef: SubDocument, prop: KProperty<*>): ReadOnlyProperty<SubDocument, V> {
             println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
-            val subFields = factory().apply {
-                _name = prop.name
-                _qualifiedName = thisRef.calcQualifiedName(_name)
+            val subFields by lazy {
+                factory().apply {
+                    _name = prop.name
+                    _qualifiedName = thisRef.calcQualifiedName(_name)
+                }
             }
             return object : ReadOnlyProperty<SubDocument, V> {
                 override fun getValue(thisRef: SubDocument, property: KProperty<*>) = subFields
@@ -39,12 +41,12 @@ abstract class SubDocument : FieldSet() {
         }
     }
 
-    class SubDocumentProperty<V: SubDocument>(private val factory: () -> V) {
+    class SubDocumentProperty<V: SubDocument>(private val name: String?, private val factory: () -> V) {
         operator fun provideDelegate(thisRef: SubDocument, prop: KProperty<*>): ReadOnlyProperty<SubDocument, V> {
 //            println("> SubDocumentProperty.provideDelegate($thisRef, ${prop.name})")
             val subDocument by lazy {
                 factory().apply {
-                    _name = prop.name
+                    _name = name ?: prop.name
                     _qualifiedName = thisRef.calcQualifiedName(_name)
                 }
             }
@@ -104,7 +106,13 @@ object ProductDoc : Document() {
     }
 
     class CompanyDoc : SubDocument() {
+        class OpinionDoc : SubDocument() {
+            val count by field()
+            val positiveCount by field("positive_count")
+        }
+
         val name by field().subFields { NameFields() }
+        val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
     val name by field().subFields { NameFields() }
@@ -123,5 +131,7 @@ fun main() {
     ProductDoc.company.name
         .also(::println)
     ProductDoc.company.name.sort
+        .also(::println)
+    ProductDoc.company.userOpinion.positiveCount
         .also(::println)
 }
