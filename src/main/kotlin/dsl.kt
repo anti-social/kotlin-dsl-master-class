@@ -47,9 +47,11 @@ class Field(val name: String? = null) {
 
     operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField> {
         println("> Field.provideDelegate($thisRef, ${prop.name})")
-        val fieldName = name ?: prop.name
-        val qualifiedName = thisRef.calcQualifiedName(fieldName)
-        val boundField = BoundField(fieldName, qualifiedName)
+        val boundField by lazy {
+            val fieldName = name ?: prop.name
+            val qualifiedName = thisRef.calcQualifiedName(fieldName)
+            BoundField(fieldName, qualifiedName)
+        }
         return object : ReadOnlyProperty<FieldSet, BoundField> {
              override fun getValue(thisRef: FieldSet, property: KProperty<*>) = boundField
         }
