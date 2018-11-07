@@ -125,7 +125,7 @@ object ProductDoc : Document() {
 }
 
 class ProductSource : Source() {
-    val name by ProductDoc.status
+    val status by ProductDoc.status
 }
 
 fun main() {
@@ -145,7 +145,7 @@ fun main() {
         .also(::println)
 
     val source = mapOf(
-        "name" to "Test name"
+        "status" to 1
     )
     val product = ProductSource().apply { _source = source }
 }
