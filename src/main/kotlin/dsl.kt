@@ -1,8 +1,6 @@
 
-class ProductDoc {
-    companion object {
-        val name = "Test"
-    }
+object ProductDoc {
+    val name = "Test"
 }
 
 fun main() {
