@@ -98,6 +98,10 @@ class MetaFields : FieldSet() {
     val parent by field("_parent")
 }
 
+abstract class Source {
+    lateinit var _source: Map<String, Any>
+}
+
 // === Real documents ===
 
 object ProductDoc : Document() {
@@ -119,6 +123,10 @@ object ProductDoc : Document() {
     val company by obj { CompanyDoc() }
 }
 
+class ProductSource : Source() {
+    val name by ProductDoc.name
+}
+
 fun main() {
     println("Let's design some nice dsl")
 
@@ -134,4 +142,9 @@ fun main() {
         .also(::println)
     ProductDoc.company.userOpinion.positiveCount
         .also(::println)
+
+    val source = mapOf(
+        "name" to "Test name"
+    )
+    val product = ProductSource().apply { _source = source }
 }
