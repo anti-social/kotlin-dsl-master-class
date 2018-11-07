@@ -85,6 +85,10 @@ class BoundField(val name: String, val qualifiedName: String) {
     override fun toString(): String {
         return "BoundField(name = $name, qualifiedName = $qualifiedName)"
     }
+
+    operator fun getValue(thisRef: Source, prop: KProperty<*>): Any? {
+        return thisRef._source[name]
+    }
 }
 
 abstract class SubFields : FieldSet()
@@ -144,8 +148,11 @@ fun main() {
     ProductDoc.company.userOpinion.positiveCount
         .also(::println)
 
+    println()
     val source = mapOf(
         "status" to 1
     )
     val product = ProductSource().apply { _source = source }
+    product.status
+        .also { println("status: $it") }
 }
