@@ -5,8 +5,8 @@ abstract class FieldSet {
 }
 
 abstract class Document : FieldSet() {
-    class SubFieldsProperty(private val factory: () -> SubFields) {
-        operator fun getValue(thisRef: Document, prop: KProperty<*>): SubFields {
+    class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
+        operator fun getValue(thisRef: Document, prop: KProperty<*>): V {
             return factory()
         }
     }
@@ -17,7 +17,7 @@ class Field(val name: String? = null) {
         return "Field(name = $name)"
     }
 
-    fun subFields(factory: () -> SubFields) = Document.SubFieldsProperty(factory)
+    fun <V: SubFields> subFields(factory: () -> V) = Document.SubFieldsProperty(factory)
 
     operator fun getValue(thisRef: FieldSet, prop: KProperty<*>): BoundField {
         return BoundField(name ?: prop.name)
@@ -39,7 +39,7 @@ object ProductDoc : Document() {
         val sort by field()
     }
 
-    val name: NameFields by field().subFields { NameFields() }
+    val name by field().subFields { NameFields() }
 }
 
 fun main() {
