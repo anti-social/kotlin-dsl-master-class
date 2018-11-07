@@ -1,4 +1,5 @@
 import java.lang.IllegalStateException
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 abstract class FieldSet {
@@ -24,11 +25,14 @@ abstract class FieldSet {
 
 abstract class Document : FieldSet() {
     class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
-        operator fun getValue(thisRef: Document, prop: KProperty<*>): V {
-            println("> SubFieldsProperty.getValue($thisRef, ${prop.name})")
-            return factory().apply {
+        operator fun provideDelegate(thisRef: Document, prop: KProperty<*>): ReadOnlyProperty<Document, V> {
+            println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
+            val subFields = factory().apply {
                 _name = prop.name
                 _qualifiedName = thisRef.calcQualifiedName(_name)
+            }
+            return object : ReadOnlyProperty<Document, V> {
+                override fun getValue(thisRef: Document, property: KProperty<*>) = subFields
             }
         }
     }
@@ -41,11 +45,14 @@ class Field(val name: String? = null) {
 
     fun <V: SubFields> subFields(factory: () -> V) = Document.SubFieldsProperty(factory)
 
-    operator fun getValue(thisRef: FieldSet, prop: KProperty<*>): BoundField {
-        println("> Field.getValue($thisRef, ${prop.name})")
+    operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField> {
+        println("> Field.provideDelegate($thisRef, ${prop.name})")
         val fieldName = name ?: prop.name
         val qualifiedName = thisRef.calcQualifiedName(fieldName)
-        return BoundField(fieldName, qualifiedName)
+        val boundField = BoundField(fieldName, qualifiedName)
+        return object : ReadOnlyProperty<FieldSet, BoundField> {
+             override fun getValue(thisRef: FieldSet, property: KProperty<*>) = boundField
+        }
     }
 }
 
