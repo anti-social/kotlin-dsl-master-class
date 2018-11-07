@@ -1,6 +1,8 @@
 import kotlin.reflect.KProperty
 
-abstract class Document
+abstract class Document {
+    fun field(name: String? = null) = Field(name)
+}
 
 class Field(val name: String? = null) {
     override fun toString(): String {
@@ -21,7 +23,7 @@ class BoundField(val name: String) {
 // === Real documents ===
 
 object ProductDoc : Document() {
-    val name by Field()
+    val name by field()
 }
 
 fun main() {
