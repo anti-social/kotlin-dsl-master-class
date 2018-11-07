@@ -24,6 +24,8 @@ abstract class FieldSet {
 }
 
 abstract class Document : FieldSet() {
+    val meta = MetaFields()
+
     class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
         operator fun provideDelegate(thisRef: Document, prop: KProperty<*>): ReadOnlyProperty<Document, V> {
             println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
@@ -66,6 +68,15 @@ class BoundField(val name: String, val qualifiedName: String) {
 
 abstract class SubFields : FieldSet()
 
+class MetaFields : FieldSet() {
+    val id by field("_id")
+    val type by field("_type")
+    val uid by field("_uid")
+
+    val routing by field("_routing")
+    val parent by field("_parent")
+}
+
 // === Real documents ===
 
 object ProductDoc : Document() {
@@ -83,6 +94,6 @@ fun main() {
         .also(::println)
     ProductDoc.name.sort
         .also(::println)
-    ProductDoc.name.sort
+    ProductDoc.meta.id
         .also(::println)
 }
