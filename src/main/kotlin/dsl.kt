@@ -26,6 +26,8 @@ abstract class FieldSet {
 abstract class Document : FieldSet() {
     val meta = MetaFields()
 
+    fun <V: Document> obj(factory: () -> V) = SubDocumentProperty(factory)
+
     class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
         operator fun provideDelegate(thisRef: Document, prop: KProperty<*>): ReadOnlyProperty<Document, V> {
             println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
@@ -35,6 +37,21 @@ abstract class Document : FieldSet() {
             }
             return object : ReadOnlyProperty<Document, V> {
                 override fun getValue(thisRef: Document, property: KProperty<*>) = subFields
+            }
+        }
+    }
+
+    class SubDocumentProperty<V: Document>(private val factory: () -> V) {
+        operator fun provideDelegate(thisRef: Document, prop: KProperty<*>): ReadOnlyProperty<Document, V> {
+            println("> SubDocumentProperty.provideDelegate($thisRef, ${prop.name})")
+            val subDocument by lazy {
+                factory().apply {
+                    _name = prop.name
+                    _qualifiedName = thisRef.calcQualifiedName(_name)
+                }
+            }
+            return object : ReadOnlyProperty<Document, V> {
+                override fun getValue(thisRef: Document, property: KProperty<*>) = subDocument
             }
         }
     }
@@ -84,7 +101,12 @@ object ProductDoc : Document() {
         val sort by field()
     }
 
+    class CompanyDoc : Document() {
+        val name by field()
+    }
+
     val name by field().subFields { NameFields() }
+    val company by obj { CompanyDoc() }
 }
 
 fun main() {
@@ -95,5 +117,9 @@ fun main() {
     ProductDoc.name.sort
         .also(::println)
     ProductDoc.meta.id
+        .also(::println)
+    ProductDoc.company.name
+        .also(::println)
+    ProductDoc.company.meta.id
         .also(::println)
 }
