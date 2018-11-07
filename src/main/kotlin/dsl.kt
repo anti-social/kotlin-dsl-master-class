@@ -1,6 +1,12 @@
 
 object ProductDoc {
-    val name = "Test"
+    val name = Field("name")
+}
+
+class Field(val name: String) {
+    override fun toString(): String {
+        return "Field(name = $name)"
+    }
 }
 
 fun main() {
