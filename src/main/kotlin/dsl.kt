@@ -120,11 +120,12 @@ object ProductDoc : Document() {
     }
 
     val name by field().subFields { NameFields() }
+    val status by field()
     val company by obj { CompanyDoc() }
 }
 
 class ProductSource : Source() {
-    val name by ProductDoc.name
+    val name by ProductDoc.status
 }
 
 fun main() {
