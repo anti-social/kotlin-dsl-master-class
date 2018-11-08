@@ -63,11 +63,12 @@ abstract class FieldSet {
 abstract class SubDocument : FieldSet() {
     fun <V: SubDocument> obj(name: String? = null, factory: () -> V) = SubDocumentProperty(name, factory)
 
-    class SubFieldsProperty<V: SubFields>(private val factory: () -> V) {
+    class SubFieldsProperty<T, V: SubFields<T>>(private val type: Type<T>, private val factory: () -> V) {
         operator fun provideDelegate(thisRef: SubDocument, prop: KProperty<*>): ReadOnlyProperty<SubDocument, V> {
             println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
             val subFields by lazy {
                 factory().apply {
+                    _type = type
                     _name = prop.name
                     _qualifiedName = thisRef.calcQualifiedName(_name)
                 }
@@ -103,7 +104,7 @@ class Field<T>(val name: String? = null, val type: Type<T>) {
         return "Field(name = $name)"
     }
 
-    fun <V: SubFields> subFields(factory: () -> V) = SubDocument.SubFieldsProperty(factory)
+    fun <V: SubFields<T>> subFields(factory: () -> V) = SubDocument.SubFieldsProperty(type, factory)
 
     operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField<T>> {
 //        println("> Field.provideDelegate($thisRef, ${prop.name})")
@@ -128,9 +129,11 @@ class BoundField<T>(val name: String, val qualifiedName: String, type: Type<T>) 
     }
 }
 
-abstract class SubFields : FieldSet() {
-    operator fun getValue(thisRef: Source, prop: KProperty<*>): Any? {
-        return thisRef._source[_name]
+abstract class SubFields<T> : FieldSet() {
+    lateinit var _type: Type<T>
+
+    operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
+        return thisRef._source[_name] as? T
     }
 }
 
@@ -150,7 +153,7 @@ abstract class Source {
 // === Real documents ===
 
 object ProductDoc : Document() {
-    class NameFields : SubFields() {
+    class NameFields<T> : SubFields<T>() {
         val sort by keyword()
     }
 
@@ -160,19 +163,20 @@ object ProductDoc : Document() {
             val positiveCount by int("positive_count")
         }
 
-        val name by text().subFields { NameFields() }
+        val name by text().subFields { NameFields<String>() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
-    val name by text().subFields { NameFields() }
+    val name by text().subFields { NameFields<String>() }
     val status by int()
     val rank by float()
     val company by obj { CompanyDoc() }
 }
 
 class ProductSource : Source() {
-    val name: Any? by ProductDoc.name
+    val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
+    val rank: Float? by ProductDoc.rank
 }
 
 fun main() {
