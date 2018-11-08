@@ -155,6 +155,8 @@ abstract class Source {
     fun <V: Source> SubDocument.source(factory: () -> V) = SubSourceProperty(this, factory)
 
     class SubSourceProperty<V: Source>(private val document: SubDocument, private val factory: () -> V) {
+        fun required() = RequiredSubSourceProperty(document, factory)
+
         operator fun provideDelegate(thisRef: Source, prop: KProperty<*>): ReadOnlyProperty<Source, V?> {
             val subSource by lazy {
                 thisRef._source
@@ -168,6 +170,26 @@ abstract class Source {
                     }
             }
             return object : ReadOnlyProperty<Source, V?> {
+                override fun getValue(thisRef: Source, property: KProperty<*>) = subSource
+            }
+        }
+    }
+
+    class RequiredSubSourceProperty<V: Source>(private val document: SubDocument, private val factory: () -> V) {
+        operator fun provideDelegate(thisRef: Source, prop: KProperty<*>): ReadOnlyProperty<Source, V> {
+            val subSource by lazy {
+                thisRef._source
+                    .let {
+                        it[document._name] as? Map<String, *>
+                    }
+                    ?.let {
+                        factory().apply {
+                            _source = it
+                        }
+                    }
+                    ?: throw IllegalArgumentException()
+            }
+            return object : ReadOnlyProperty<Source, V> {
                 override fun getValue(thisRef: Source, property: KProperty<*>) = subSource
             }
         }
@@ -223,7 +245,7 @@ class ProductSource : Source() {
     val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
     val rank: Float? by ProductDoc.rank
-    val company: CompanySource? by ProductDoc.company.source { CompanySource() }
+    val company: CompanySource by ProductDoc.company.source { CompanySource() }.required()
 }
 
 fun main() {
@@ -259,8 +281,8 @@ fun main() {
         .also { println("name: $it") }
     product.status
         .also { println("status: $it") }
-    product.company?.id
+    product.company.id
         .also { println("company.id: $it") }
-    product.company?.name
+    product.company.name
         .also { println("company.name: $it") }
 }
