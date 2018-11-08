@@ -163,11 +163,11 @@ object ProductDoc : Document() {
             val positiveCount by int("positive_count")
         }
 
-        val name by text().subFields { NameFields<String>() }
+        val name by text().subFields { NameFields() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
-    val name by text().subFields { NameFields<String>() }
+    val name by text().subFields { NameFields() }
     val status by int()
     val rank by float()
     val company by obj { CompanyDoc() }
