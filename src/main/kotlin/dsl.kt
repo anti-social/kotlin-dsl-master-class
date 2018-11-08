@@ -1,6 +1,39 @@
+import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
+
+interface Type<T> {
+    fun deserialize(v: Any): T
+}
+
+abstract class NumberType<T: Number> : Type<T>
+
+object IntType : NumberType<Int>() {
+    override fun deserialize(v: Any) = when(v) {
+        is Int -> v
+        is String -> v.toInt()
+        else -> throw IllegalArgumentException()
+    }
+}
+
+object FloatType : NumberType<Float>() {
+    override fun deserialize(v: Any) = when(v) {
+        is Int -> v.toFloat()
+        is Float -> v
+        is String -> v.toFloat()
+        else -> throw IllegalArgumentException()
+    }
+}
+
+abstract class StringType : Type<String> {
+    override fun deserialize(v: Any): String {
+        return v.toString()
+    }
+}
+
+object KeywordType : StringType()
+object TextType : StringType()
 
 abstract class FieldSet {
     var _name = ""
