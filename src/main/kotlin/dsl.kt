@@ -65,7 +65,7 @@ abstract class SubDocument : FieldSet() {
 
     class SubFieldsProperty<T, V: SubFields<T>>(private val name: String?, private val type: Type<T>, private val factory: () -> V) {
         operator fun provideDelegate(thisRef: SubDocument, prop: KProperty<*>): ReadOnlyProperty<SubDocument, V> {
-            println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
+//            println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
             val subFields by lazy {
                 factory().apply {
                     _type = type
@@ -133,7 +133,6 @@ abstract class SubFields<T> : FieldSet() {
     lateinit var _type: Type<T>
 
     operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
-        println(_name)
         return thisRef._source[_name] as? T
     }
 }
@@ -185,14 +184,14 @@ object ProductDoc : Document() {
             val positiveCount by int("positive_count")
         }
 
-        val name by text("n").subFields { NameFields() }
+        val name by text().subFields { NameFields() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
     val name by text().subFields { NameFields() }
     val status by int()
     val rank by float()
-    val company by obj("c") { CompanyDoc() }
+    val company by obj { CompanyDoc() }
 }
 
 class ProductSource : Source() {
@@ -226,8 +225,8 @@ fun main() {
     val source = mapOf(
         "name" to "Test name",
         "status" to 1,
-        "c" to mapOf(
-            "n" to "Test company"
+        "company" to mapOf(
+            "name" to "Test company"
         )
     )
     val product = ProductSource().apply { _source = source }
