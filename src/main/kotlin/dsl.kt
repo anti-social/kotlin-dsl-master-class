@@ -35,7 +35,80 @@ abstract class StringType : Type<String> {
 object KeywordType : StringType()
 object TextType : StringType()
 
-abstract class FieldSet {
+interface FieldOperations {
+    fun eq(other: Any?) = Term(this, other)
+    fun match(other: Any?) = Match(this, other)
+}
+
+interface Expr {
+    val name: String
+}
+
+interface QueryExpr : Expr
+
+class Term(val field: FieldOperations, val other: Any?) : QueryExpr {
+    override val name = "term"
+}
+
+class Match(val field: FieldOperations, val other: Any?) : QueryExpr {
+    override val name = "match"
+}
+
+class MultiMatch(
+    val query: String,
+    val fields: List<FieldOperations>,
+    val type: MultiMatch.Type? = null,
+    val boost: Double? = null
+) : QueryExpr {
+    enum class Type {
+        BEST_FIELDS, MOST_FIELDS, CROSS_FIELDS, PHRASE, PHRASE_PREFIX
+    }
+
+    override val name = "multi_match"
+}
+
+class Bool(
+    val filter: List<QueryExpr>? = null,
+    val should: List<QueryExpr>? = null,
+    val must: List<QueryExpr>? = null,
+    val mustNot: List<QueryExpr>? = null
+) : QueryExpr {
+    override val name = "bool"
+}
+
+class FunctionScore(
+    val query: QueryExpr?,
+    val boost: Double? = null,
+    val scoreMode: FunctionScore.ScoreMode? = null,
+    val boostMode: FunctionScore.BoostMode? = null,
+    val functions: List<Func>
+) : QueryExpr {
+    enum class ScoreMode {
+        MULTIPLY, SUM, AVG, FIRST, MAX, MIN
+    }
+    enum class BoostMode {
+        MULTIPLY, REPLACE, SUM, AVG, MAX, MIN
+    }
+
+    override val name = "function_score"
+}
+
+abstract class Func(val filter: QueryExpr?) : Expr
+
+class Weight(val weight: Double, filter: QueryExpr?) : Func(filter) {
+    override val name = "weight"
+}
+
+class FieldValueFactor(
+    val field: FieldOperations,
+    val factor: Double? = null,
+    val missing: Double? = null,
+    filter: QueryExpr? = null
+) : Func(filter) {
+    override val name = "field_value_factor"
+}
+
+abstract class FieldSet : FieldOperations {
     var _name = ""
         set(value) {
             if (_name.isNotEmpty()) throw IllegalStateException()
@@ -119,7 +192,7 @@ class Field<T>(val name: String? = null, val type: Type<T>) {
     }
 }
 
-class BoundField<T>(val name: String, val qualifiedName: String, val type: Type<T>) {
+class BoundField<T>(val name: String, val qualifiedName: String, val type: Type<T>) : FieldOperations {
     override fun toString(): String {
         return "BoundField(name = $name, qualifiedName = $qualifiedName)"
     }
@@ -287,4 +360,26 @@ fun main() {
         .also { println("company.id: $it") }
     product.company.name
         .also { println("company.name: $it") }
+
+    println()
+    ProductDoc.status.eq(1)
+        .also(::println)
+    ProductDoc.name.match("Test name")
+        .also(::println)
+    Bool(
+        filter = listOf(ProductDoc.status.eq(0)),
+        should = listOf(
+            FunctionScore(
+                MultiMatch(
+                    "Test term",
+                    listOf(ProductDoc.name, ProductDoc.company.name),
+                    type = MultiMatch.Type.CROSS_FIELDS
+                ),
+                functions = listOf(
+                    Weight(2.0, ProductDoc.company.userOpinion.count.eq(2)),
+                    FieldValueFactor(ProductDoc.rank, 5.0)
+                )
+        ))
+    )
+        .also(::println)
 }
