@@ -125,6 +125,7 @@ class BoundField<T>(val name: String, val qualifiedName: String, val type: Type<
     }
 
     fun required() = Source.RequiredFieldProperty(this)
+    operator fun unaryPlus() = required()
 
     operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
         return thisRef._source[name]
@@ -156,6 +157,7 @@ abstract class Source {
 
     class SubSourceProperty<V: Source>(private val document: SubDocument, private val factory: () -> V) {
         fun required() = RequiredSubSourceProperty(document, factory)
+        operator fun unaryPlus() = required()
 
         operator fun provideDelegate(thisRef: Source, prop: KProperty<*>): ReadOnlyProperty<Source, V?> {
             val subSource by lazy {
@@ -237,15 +239,15 @@ object ProductDoc : Document() {
 
 class ProductSource : Source() {
     class CompanySource : Source() {
-        val id: Int by ProductDoc.company.id.required()
+        val id: Int by +ProductDoc.company.id
         val name by ProductDoc.company.name
     }
 
-    val id: Int by ProductDoc.id.required()
+    val id: Int by +ProductDoc.id
     val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
     val rank: Float? by ProductDoc.rank
-    val company: CompanySource by ProductDoc.company.source { CompanySource() }.required()
+    val company: CompanySource by +ProductDoc.company.source { CompanySource() }
 }
 
 fun main() {
