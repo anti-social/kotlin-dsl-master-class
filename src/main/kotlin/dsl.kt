@@ -47,7 +47,7 @@ abstract class FieldSet {
             field = value
         }
 
-    fun <T> field(name: String? = null, type: Type<T>) = Field(name)
+    fun <T> field(name: String? = null, type: Type<T>) = Field(name, type)
     fun int(name: String? = null) = field(name, IntType)
     fun float(name: String? = null) = field(name, FloatType)
     fun keyword(name: String? = null) = field(name, KeywordType)
@@ -98,33 +98,33 @@ abstract class Document : SubDocument() {
     val meta = MetaFields()
 }
 
-class Field(val name: String? = null) {
+class Field<T>(val name: String? = null, val type: Type<T>) {
     override fun toString(): String {
         return "Field(name = $name)"
     }
 
     fun <V: SubFields> subFields(factory: () -> V) = SubDocument.SubFieldsProperty(factory)
 
-    operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField> {
+    operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField<T>> {
 //        println("> Field.provideDelegate($thisRef, ${prop.name})")
         val boundField by lazy {
             val fieldName = name ?: prop.name
             val qualifiedName = thisRef.calcQualifiedName(fieldName)
-            BoundField(fieldName, qualifiedName)
+            BoundField(fieldName, qualifiedName, type)
         }
-        return object : ReadOnlyProperty<FieldSet, BoundField> {
+        return object : ReadOnlyProperty<FieldSet, BoundField<T>> {
              override fun getValue(thisRef: FieldSet, property: KProperty<*>) = boundField
         }
     }
 }
 
-class BoundField(val name: String, val qualifiedName: String) {
+class BoundField<T>(val name: String, val qualifiedName: String, type: Type<T>) {
     override fun toString(): String {
         return "BoundField(name = $name, qualifiedName = $qualifiedName)"
     }
 
-    operator fun getValue(thisRef: Source, prop: KProperty<*>): Any? {
-        return thisRef._source[name]
+    operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
+        return thisRef._source[name] as? T
     }
 }
 
@@ -172,7 +172,7 @@ object ProductDoc : Document() {
 
 class ProductSource : Source() {
     val name: Any? by ProductDoc.name
-    val status: Any? by ProductDoc.status
+    val status: Int? by ProductDoc.status
 }
 
 fun main() {
