@@ -119,13 +119,16 @@ class Field<T>(val name: String? = null, val type: Type<T>) {
     }
 }
 
-class BoundField<T>(val name: String, val qualifiedName: String, type: Type<T>) {
+class BoundField<T>(val name: String, val qualifiedName: String, val type: Type<T>) {
     override fun toString(): String {
         return "BoundField(name = $name, qualifiedName = $qualifiedName)"
     }
 
+    fun required() = Source.RequiredFieldProperty(this)
+
     operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
-        return thisRef._source[name] as? T
+        return thisRef._source[name]
+            ?.let { type.deserialize(it) }
     }
 }
 
@@ -169,6 +172,20 @@ abstract class Source {
             }
         }
     }
+
+    class RequiredFieldProperty<T>(private val field: BoundField<T>) {
+        operator fun provideDelegate(thisRef: Source, prop: KProperty<*>): ReadOnlyProperty<Source, T> {
+            val value by lazy {
+                field.type.deserialize(
+                    thisRef._source[field.name]
+                        ?: throw IllegalArgumentException()
+                )
+            }
+            return object : ReadOnlyProperty<Source, T> {
+                override fun getValue(thisRef: Source, property: KProperty<*>) = value
+            }
+        }
+    }
 }
 
 // === Real documents ===
@@ -184,6 +201,7 @@ object ProductDoc : Document() {
             val positiveCount by int("positive_count")
         }
 
+        val id by int()
         val name by text().subFields { NameFields() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
@@ -197,10 +215,11 @@ object ProductDoc : Document() {
 
 class ProductSource : Source() {
     class CompanySource : Source() {
+        val id: Int by ProductDoc.company.id.required()
         val name by ProductDoc.company.name
     }
 
-    val id: Int by ProductDoc.id
+    val id: Int by ProductDoc.id.required()
     val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
     val rank: Float? by ProductDoc.rank
@@ -225,17 +244,23 @@ fun main() {
 
     println()
     val source = mapOf(
+        "id" to "111",
         "name" to "Test name",
         "status" to 1,
         "company" to mapOf(
+            "id" to "7",
             "name" to "Test company"
         )
     )
     val product = ProductSource().apply { _source = source }
+    product.id
+        .also { println("id: $it") }
     product.name
         .also { println("name: $it") }
     product.status
         .also { println("status: $it") }
+    product.company?.id
+        .also { println("company.id: $it") }
     product.company?.name
         .also { println("company.name: $it") }
 }
