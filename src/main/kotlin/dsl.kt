@@ -47,7 +47,11 @@ abstract class FieldSet {
             field = value
         }
 
-    fun field(name: String? = null) = Field(name)
+    fun <T> field(name: String? = null, type: Type<T>) = Field(name)
+    fun int(name: String? = null) = field(name, IntType)
+    fun float(name: String? = null) = field(name, FloatType)
+    fun keyword(name: String? = null) = field(name, KeywordType)
+    fun text(name: String? = null) = field(name, TextType)
 
     fun calcQualifiedName(fieldName: String) = if (_qualifiedName.isNotEmpty()) {
         "$_qualifiedName.$fieldName"
@@ -131,12 +135,12 @@ abstract class SubFields : FieldSet() {
 }
 
 class MetaFields : FieldSet() {
-    val id by field("_id")
-    val type by field("_type")
-    val uid by field("_uid")
+    val id by keyword("_id")
+    val type by keyword("_type")
+    val uid by keyword("_uid")
 
-    val routing by field("_routing")
-    val parent by field("_parent")
+    val routing by keyword("_routing")
+    val parent by keyword("_parent")
 }
 
 abstract class Source {
@@ -147,21 +151,22 @@ abstract class Source {
 
 object ProductDoc : Document() {
     class NameFields : SubFields() {
-        val sort by field()
+        val sort by keyword()
     }
 
     class CompanyDoc : SubDocument() {
         class OpinionDoc : SubDocument() {
-            val count by field()
-            val positiveCount by field("positive_count")
+            val count by int()
+            val positiveCount by int("positive_count")
         }
 
-        val name by field().subFields { NameFields() }
+        val name by text().subFields { NameFields() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
-    val name by field().subFields { NameFields() }
-    val status by field()
+    val name by text().subFields { NameFields() }
+    val status by int()
+    val rank by float()
     val company by obj { CompanyDoc() }
 }
 
