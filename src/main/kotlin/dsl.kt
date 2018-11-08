@@ -91,7 +91,11 @@ class BoundField(val name: String, val qualifiedName: String) {
     }
 }
 
-abstract class SubFields : FieldSet()
+abstract class SubFields : FieldSet() {
+    operator fun getValue(thisRef: Source, prop: KProperty<*>): Any? {
+        return thisRef._source[_name]
+    }
+}
 
 class MetaFields : FieldSet() {
     val id by field("_id")
@@ -129,7 +133,8 @@ object ProductDoc : Document() {
 }
 
 class ProductSource : Source() {
-    val status by ProductDoc.status
+    val name: Any? by ProductDoc.name
+    val status: Any? by ProductDoc.status
 }
 
 fun main() {
@@ -150,9 +155,12 @@ fun main() {
 
     println()
     val source = mapOf(
+        "name" to "Test name",
         "status" to 1
     )
     val product = ProductSource().apply { _source = source }
+    product.name
+        .also { println("name: $it") }
     product.status
         .also { println("status: $it") }
 }
