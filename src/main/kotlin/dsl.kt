@@ -188,6 +188,7 @@ object ProductDoc : Document() {
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
+    val id by int()
     val name by text().subFields { NameFields() }
     val status by int()
     val rank by float()
@@ -199,6 +200,7 @@ class ProductSource : Source() {
         val name by ProductDoc.company.name
     }
 
+    val id: Int by ProductDoc.id
     val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
     val rank: Float? by ProductDoc.rank
