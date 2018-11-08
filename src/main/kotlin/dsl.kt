@@ -63,13 +63,13 @@ abstract class FieldSet {
 abstract class SubDocument : FieldSet() {
     fun <V: SubDocument> obj(name: String? = null, factory: () -> V) = SubDocumentProperty(name, factory)
 
-    class SubFieldsProperty<T, V: SubFields<T>>(private val type: Type<T>, private val factory: () -> V) {
+    class SubFieldsProperty<T, V: SubFields<T>>(private val name: String?, private val type: Type<T>, private val factory: () -> V) {
         operator fun provideDelegate(thisRef: SubDocument, prop: KProperty<*>): ReadOnlyProperty<SubDocument, V> {
             println("> SubFieldsProperty.provideDelegate($thisRef, ${prop.name})")
             val subFields by lazy {
                 factory().apply {
                     _type = type
-                    _name = prop.name
+                    _name = name ?: prop.name
                     _qualifiedName = thisRef.calcQualifiedName(_name)
                 }
             }
@@ -104,7 +104,7 @@ class Field<T>(val name: String? = null, val type: Type<T>) {
         return "Field(name = $name)"
     }
 
-    fun <V: SubFields<T>> subFields(factory: () -> V) = SubDocument.SubFieldsProperty(type, factory)
+    fun <V: SubFields<T>> subFields(factory: () -> V) = SubDocument.SubFieldsProperty(name, type, factory)
 
     operator fun provideDelegate(thisRef: FieldSet, prop: KProperty<*>): ReadOnlyProperty<FieldSet, BoundField<T>> {
 //        println("> Field.provideDelegate($thisRef, ${prop.name})")
@@ -133,6 +133,7 @@ abstract class SubFields<T> : FieldSet() {
     lateinit var _type: Type<T>
 
     operator fun getValue(thisRef: Source, prop: KProperty<*>): T? {
+        println(_name)
         return thisRef._source[_name] as? T
     }
 }
@@ -147,7 +148,28 @@ class MetaFields : FieldSet() {
 }
 
 abstract class Source {
-    lateinit var _source: Map<String, Any>
+    lateinit var _source: Map<String, Any?>
+
+    fun <V: Source> SubDocument.source(factory: () -> V) = SubSourceProperty(this, factory)
+
+    class SubSourceProperty<V: Source>(private val document: SubDocument, private val factory: () -> V) {
+        operator fun provideDelegate(thisRef: Source, prop: KProperty<*>): ReadOnlyProperty<Source, V?> {
+            val subSource by lazy {
+                thisRef._source
+                    .let {
+                        it[document._name] as? Map<String, *>
+                    }
+                    ?.let {
+                        factory().apply {
+                            _source = it
+                        }
+                    }
+            }
+            return object : ReadOnlyProperty<Source, V?> {
+                override fun getValue(thisRef: Source, property: KProperty<*>) = subSource
+            }
+        }
+    }
 }
 
 // === Real documents ===
@@ -163,20 +185,25 @@ object ProductDoc : Document() {
             val positiveCount by int("positive_count")
         }
 
-        val name by text().subFields { NameFields() }
+        val name by text("n").subFields { NameFields() }
         val userOpinion by obj("user_opinion") { OpinionDoc() }
     }
 
     val name by text().subFields { NameFields() }
     val status by int()
     val rank by float()
-    val company by obj { CompanyDoc() }
+    val company by obj("c") { CompanyDoc() }
 }
 
 class ProductSource : Source() {
+    class CompanySource : Source() {
+        val name by ProductDoc.company.name
+    }
+
     val name: String? by ProductDoc.name
     val status: Int? by ProductDoc.status
     val rank: Float? by ProductDoc.rank
+    val company: CompanySource? by ProductDoc.company.source { CompanySource() }
 }
 
 fun main() {
@@ -198,11 +225,16 @@ fun main() {
     println()
     val source = mapOf(
         "name" to "Test name",
-        "status" to 1
+        "status" to 1,
+        "c" to mapOf(
+            "n" to "Test company"
+        )
     )
     val product = ProductSource().apply { _source = source }
     product.name
         .also { println("name: $it") }
     product.status
         .also { println("status: $it") }
+    product.company?.name
+        .also { println("company.name: $it") }
 }
