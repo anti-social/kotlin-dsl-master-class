@@ -65,11 +65,11 @@ class Match(val field: FieldOperations, val other: Any?) : QueryExpr {
 class MultiMatch(
     val query: String,
     val fields: List<FieldOperations>,
-    val type: MultiMatch.Type? = null,
+    val type: Type? = null,
     val boost: Double? = null
 ) : QueryExpr {
     enum class Type {
-        BEST_FIELDS, MOST_FIELDS, CROSS_FIELDS, PHRASE, PHRASE_PREFIX
+        BEST_FIELDS, MOST_FIELDS, CROSS_FIELDS, PHRASE, PHRASE_PREFIX;
     }
 
     override val name = "multi_match"
@@ -150,6 +150,40 @@ class FieldValueFactor(
 
 class SearchQuery(var query: QueryExpr? = null) {
     val filters = mutableListOf<QueryExpr>()
+
+    object QueryCtx {
+        val bool = Bool
+
+        fun multiMatch(
+            query: String,
+            fields: List<FieldOperations>,
+            type: MultiMatch.Type? = null,
+            boost: Double? = null
+        ) = MultiMatch(query, fields, type, boost)
+
+        fun functionScore(
+            query: QueryExpr?,
+            boost: Double? = null,
+            scoreMode: FunctionScore.ScoreMode? = null,
+            boostMode: FunctionScore.BoostMode? = null,
+            functions: List<Func>
+        ) = FunctionScore(query, boost, scoreMode, boostMode, functions)
+
+        fun weight(weight: Double, filter: QueryExpr? = null) = Weight(weight, filter)
+
+        fun fieldValueFactor(
+            field: FieldOperations,
+            factor: Double? = null,
+            missing: Double? = null,
+            filter: QueryExpr? = null
+        ) = FieldValueFactor(field, factor, missing, filter)
+    }
+
+    constructor(block: QueryCtx.() -> QueryExpr?) : this(QueryCtx.block())
+
+    fun query(block: QueryCtx.() -> QueryExpr?) {
+        this.query = QueryCtx.block()
+    }
 
     fun query(query: QueryExpr?) = apply {
         this.query = query
@@ -458,5 +492,20 @@ fun main() {
         )
     )
         .filter(ProductDoc.status.eq(0))
+        .also(::println)
+
+    SearchQuery {
+        functionScore(
+            multiMatch(
+                "Test term",
+                listOf(ProductDoc.name, ProductDoc.company.name),
+                type = MultiMatch.Type.CROSS_FIELDS
+            ),
+            functions = listOf(
+                weight(2.0, ProductDoc.company.userOpinion.count.eq(2)),
+                fieldValueFactor(ProductDoc.rank, 5.0)
+            )
+        )
+    }
         .also(::println)
 }
