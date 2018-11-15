@@ -87,6 +87,13 @@ class Bool(
 ) : QueryExpr {
     override val name = "bool"
 
+    companion object {
+        fun filter(vararg exprs: QueryExpr) = Bool(filter = exprs.toList())
+        fun should(vararg exprs: QueryExpr) = Bool(should = exprs.toList())
+        fun must(vararg exprs: QueryExpr) = Bool(must = exprs.toList())
+        fun mustNot(vararg exprs: QueryExpr) = Bool(mustNot = exprs.toList())
+    }
+
     override fun toString(): String {
         return "Bool(filter = $filter, should = $should, must = $must, must_not = $mustNot)"
     }
