@@ -48,10 +48,18 @@ interface QueryExpr : Expr
 
 class Term(val field: FieldOperations, val other: Any?) : QueryExpr {
     override val name = "term"
+
+    override fun toString(): String {
+        return "Term(field = $field, other = $other)"
+    }
 }
 
 class Match(val field: FieldOperations, val other: Any?) : QueryExpr {
     override val name = "match"
+
+    override fun toString(): String {
+        return "Match(field = $field, other = $other)"
+    }
 }
 
 class MultiMatch(
@@ -65,6 +73,10 @@ class MultiMatch(
     }
 
     override val name = "multi_match"
+
+    override fun toString(): String {
+        return "MultiMatch(query = $query, fields = $fields, type = $type, boost = $boost)"
+    }
 }
 
 class Bool(
@@ -74,6 +86,10 @@ class Bool(
     val mustNot: List<QueryExpr>? = null
 ) : QueryExpr {
     override val name = "bool"
+
+    override fun toString(): String {
+        return "Bool(filter = $filter, should = $should, must = $must, must_not = $mustNot)"
+    }
 }
 
 class FunctionScore(
@@ -91,12 +107,25 @@ class FunctionScore(
     }
 
     override val name = "function_score"
+
+    override fun toString(): String {
+        return """FunctionScore(
+            |query = $query,
+            |boost = $boost,
+            |scoreMode = $scoreMode,
+            |boostMode = $boostMode,
+            |functions = $functions)""".trimMargin()
+    }
 }
 
 abstract class Func(val filter: QueryExpr?) : Expr
 
 class Weight(val weight: Double, filter: QueryExpr?) : Func(filter) {
     override val name = "weight"
+
+    override fun toString(): String {
+        return "Weight(weight = $weight, filter = $filter)"
+    }
 }
 
 class FieldValueFactor(
@@ -106,6 +135,10 @@ class FieldValueFactor(
     filter: QueryExpr? = null
 ) : Func(filter) {
     override val name = "field_value_factor"
+
+    override fun toString(): String {
+        return "FieldValueFactor(field = $field, factor = $factor, missing = $missing, filter = $filter)"
+    }
 }
 
 abstract class FieldSet : FieldOperations {
