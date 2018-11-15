@@ -148,6 +148,22 @@ class FieldValueFactor(
     }
 }
 
+class SearchQuery(var query: QueryExpr? = null) {
+    val filters = mutableListOf<QueryExpr>()
+
+    fun query(query: QueryExpr?) = apply {
+        this.query = query
+    }
+
+    fun filter(vararg filters: QueryExpr) = apply {
+        this.filters += filters
+    }
+
+    override fun toString(): String {
+        return "SearchQuery(query = $query, filters = $filters)"
+    }
+}
+
 abstract class FieldSet : FieldOperations {
     var _name = ""
         set(value) {
@@ -170,6 +186,10 @@ abstract class FieldSet : FieldOperations {
         "$_qualifiedName.$fieldName"
     } else {
         fieldName
+    }
+
+    override fun toString(): String {
+        return "FieldSet(_name = $_name, _qualifiedName = $_qualifiedName)"
     }
 }
 
@@ -421,5 +441,22 @@ fun main() {
                 )
         ))
     )
+        .also(::println)
+
+    println()
+    SearchQuery(
+        FunctionScore(
+            MultiMatch(
+                "Test term",
+                listOf(ProductDoc.name, ProductDoc.company.name),
+                type = MultiMatch.Type.CROSS_FIELDS
+            ),
+            functions = listOf(
+                Weight(2.0, ProductDoc.company.userOpinion.count.eq(2)),
+                FieldValueFactor(ProductDoc.rank, 5.0)
+            )
+        )
+    )
+        .filter(ProductDoc.status.eq(0))
         .also(::println)
 }
