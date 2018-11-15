@@ -36,6 +36,9 @@ object KeywordType : StringType()
 object TextType : StringType()
 
 interface FieldOperations {
+    val _name: String
+    val _qualifiedName: String
+
     fun eq(other: Any?) = Term(this, other)
     fun match(other: Any?) = Match(this, other)
 }
@@ -199,12 +202,12 @@ class SearchQuery(var query: QueryExpr? = null) {
 }
 
 abstract class FieldSet : FieldOperations {
-    var _name = ""
+    override var _name = ""
         set(value) {
             if (_name.isNotEmpty()) throw IllegalStateException()
             field = value
         }
-    var _qualifiedName = ""
+    override var _qualifiedName = ""
         set(value) {
             if (_qualifiedName.isNotEmpty()) throw IllegalStateException()
             field = value
@@ -287,6 +290,9 @@ class Field<T>(val name: String? = null, val type: Type<T>) {
 }
 
 class BoundField<T>(val name: String, val qualifiedName: String, val type: Type<T>) : FieldOperations {
+    override val _name = name
+    override val _qualifiedName = qualifiedName
+
     override fun toString(): String {
         return "BoundField(name = $name, qualifiedName = $qualifiedName)"
     }
