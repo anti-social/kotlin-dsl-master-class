@@ -141,7 +141,7 @@ class QueryToJsonSerializationSerializer : QuerySerializer {
 }
 
 class Compiler(private val serializer: QuerySerializer) {
-    fun visit(searchQuery: SearchQuery, ctx: QuerySerializer.ObjectCtx) = ctx.run {
+    fun visit(searchQuery: SearchQuery<*>, ctx: QuerySerializer.ObjectCtx) = ctx.run {
         obj("query") {
             searchQuery.query?.let { query ->
                 visit(query)

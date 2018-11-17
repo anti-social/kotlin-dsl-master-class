@@ -151,7 +151,7 @@ class FieldValueFactor(
     }
 }
 
-class SearchQuery(var query: QueryExpr? = null) {
+open class SearchQuery<T: SearchQuery<T>>(var docType: String? = null, var query: QueryExpr? = null) {
     val filters = mutableListOf<QueryExpr>()
 
     object QueryCtx {
@@ -182,23 +182,42 @@ class SearchQuery(var query: QueryExpr? = null) {
         ) = FieldValueFactor(field, factor, missing, filter)
     }
 
-    constructor(block: QueryCtx.() -> QueryExpr?) : this(QueryCtx.block())
+    constructor(query: QueryExpr? = null) : this(null, query)
+    constructor(block: QueryCtx.() -> QueryExpr?) : this(null, QueryCtx.block())
+    constructor(docType: String? = null, block: QueryCtx.() -> QueryExpr?) : this(docType, QueryCtx.block())
 
-    fun query(block: QueryCtx.() -> QueryExpr?) {
-        this.query = QueryCtx.block()
-    }
+    @Suppress("UNCHECKED_CAST")
+    protected fun self(): T = this as T
 
-    fun query(query: QueryExpr?) = apply {
+    fun usingIndex(index: Index) = BoundSearchQuery(index, docType, this)
+
+    fun query(block: QueryCtx.() -> QueryExpr?): T = query(QueryCtx.block())
+
+    fun query(query: QueryExpr?): T {
         this.query = query
+        return self()
     }
 
-    fun filter(vararg filters: QueryExpr) = apply {
+    fun filter(vararg filters: QueryExpr): T {
         this.filters += filters
+        return self()
     }
 
     override fun toString(): String {
         return "SearchQuery(query = $query, filters = $filters)"
     }
+}
+
+class BoundSearchQuery(
+    val index: Index,
+    docType: String?,
+    searchQuery: SearchQuery<*>
+) : SearchQuery<BoundSearchQuery>(docType, searchQuery.query) {
+    init {
+        filters += searchQuery.filters
+    }
+
+    suspend fun execute() = index.search(this)
 }
 
 abstract class FieldSet : FieldOperations {
