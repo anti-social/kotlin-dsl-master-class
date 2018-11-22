@@ -18,6 +18,7 @@ object ProductDoc : Document() {
     val id by int()
     val name by text().subFields { NameFields() }
     val company by obj { CompanyDoc() }
+    val status by int()
     val rank by float()
 }
 
@@ -38,4 +39,5 @@ SearchQuery {
         )
     )
 }
+    .filter(ProductDoc.status.eq(0))
 ```
