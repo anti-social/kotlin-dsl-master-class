@@ -2,7 +2,7 @@
 
 We'll try to create a DSL for building Elasticsearch queries
 
-Our goal is to allow define a document:
+Our goal is to allow to define a document like:
 
 ```kotlin
 object ProductDoc : Document() {
@@ -23,7 +23,7 @@ object ProductDoc : Document() {
 
 ```
 
-And building queries:
+And building queries like:
 
 ```kotlin
 SearchQuery {
