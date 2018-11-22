@@ -41,3 +41,7 @@ SearchQuery {
 }
     .filter(ProductDoc.status.eq(0))
 ```
+
+Links:
+
+* https://kotlinlang.org/docs/reference/delegated-properties.html
